@@ -5,12 +5,11 @@ import { ContactButton } from './ContactButton';
 
 interface HeroSectionProps {
   onOpenContact: () => void;
-  onOpenPricing: () => void;
+  onOpenPricing?: () => void;
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({
   onOpenContact,
-  onOpenPricing,
 }) => {
   return (
     <section
@@ -33,15 +32,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             >
               About
             </a>
-          </li>
-          <li>
-            <button
-              type="button"
-              onClick={onOpenPricing}
-              className="text-[#D7E2EA] font-medium uppercase tracking-wider text-sm md:text-lg lg:text-[1.4rem] hover:opacity-70 transition-opacity duration-200 cursor-pointer bg-transparent border-none p-0"
-            >
-              Price
-            </button>
           </li>
           <li>
             <a

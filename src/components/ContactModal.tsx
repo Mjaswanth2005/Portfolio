@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Mail, CheckCircle2, Send, Sparkles, Copy, Check } from 'lucide-react';
+import { X, CheckCircle2, Send, Sparkles } from 'lucide-react';
 
 interface ContactModalProps {
   isOpen: boolean;
@@ -12,19 +12,9 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
     name: '',
     email: '',
     service: '3D Modeling',
-    budget: '$5k - $10k',
     message: '',
   });
-  const [copied, setCopied] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-
-  const email = 'jaswanth@3dcreator.art';
-
-  const handleCopyEmail = () => {
-    navigator.clipboard.writeText(email);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,35 +65,8 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
                 Let&apos;s Build Together
               </h2>
               <p className="text-sm sm:text-base text-[#9FA8B4] mt-2">
-                Have an ambitious 3D, branding, or motion project in mind? Drop a message below or email directly.
+                Have an ambitious 3D, branding, or motion project in mind? Drop a message below to connect.
               </p>
-            </div>
-
-            {/* Quick Email Copy Box */}
-            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#1A1E26] border border-[#2F3746] mb-6">
-              <div className="flex items-center gap-3 truncate">
-                <div className="p-2 rounded-xl bg-[#2A313E] text-white">
-                  <Mail className="w-4 h-4" />
-                </div>
-                <span className="font-mono text-sm sm:text-base text-white truncate">{email}</span>
-              </div>
-              <button
-                type="button"
-                onClick={handleCopyEmail}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-xs text-white uppercase tracking-wider font-medium transition-colors cursor-pointer shrink-0"
-              >
-                {copied ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Copied!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>Copy</span>
-                  </>
-                )}
-              </button>
             </div>
 
             {/* Form */}
@@ -148,38 +111,21 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs uppercase tracking-wider text-[#9FA8B4] font-medium mb-1.5">
-                      Project Service
-                    </label>
-                    <select
-                      value={formData.service}
-                      onChange={(e) => setFormData({ ...formData, service: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#181C23] border border-[#2B313C] focus:border-[#B600A8] focus:outline-none text-white text-sm cursor-pointer"
-                    >
-                      <option value="3D Modeling">3D Modeling</option>
-                      <option value="Rendering">Rendering & Shading</option>
-                      <option value="Motion Design">Motion Design & Animation</option>
-                      <option value="Branding">Full 3D Brand Identity</option>
-                      <option value="Web Design">Web 3D & Design</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs uppercase tracking-wider text-[#9FA8B4] font-medium mb-1.5">
-                      Estimated Budget
-                    </label>
-                    <select
-                      value={formData.budget}
-                      onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#181C23] border border-[#2B313C] focus:border-[#B600A8] focus:outline-none text-white text-sm cursor-pointer"
-                    >
-                      <option value="< $5k">&lt; $5,000</option>
-                      <option value="$5k - $10k">$5,000 - $10,000</option>
-                      <option value="$10k - $20k">$10,000 - $20,000</option>
-                      <option value="$20k+">$20,000+</option>
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-[#9FA8B4] font-medium mb-1.5">
+                    Project Service
+                  </label>
+                  <select
+                    value={formData.service}
+                    onChange={(e) => setFormData({ ...formData, service: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#181C23] border border-[#2B313C] focus:border-[#B600A8] focus:outline-none text-white text-sm cursor-pointer"
+                  >
+                    <option value="3D Modeling">3D Modeling</option>
+                    <option value="Rendering">Rendering & Shading</option>
+                    <option value="Motion Design">Motion Design & Animation</option>
+                    <option value="Branding">Full 3D Brand Identity</option>
+                    <option value="Web Design">Web 3D & Design</option>
+                  </select>
                 </div>
 
                 <div>
@@ -187,7 +133,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
                     Project Brief
                   </label>
                   <textarea
-                    rows={3}
+                    rows={4}
                     required
                     placeholder="Tell Jaswanth about your vision, timeline, and goals..."
                     value={formData.message}

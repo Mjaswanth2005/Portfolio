@@ -1,16 +1,13 @@
 import React from 'react';
 import { ArrowUp, Sparkles } from 'lucide-react';
-import { ContactButton } from './ContactButton';
 import { FadeIn } from './FadeIn';
 
 interface FooterSectionProps {
-  onOpenContact: () => void;
+  onOpenContact?: () => void;
   onOpenPricing?: () => void;
 }
 
-export const FooterSection: React.FC<FooterSectionProps> = ({
-  onOpenContact,
-}) => {
+export const FooterSection: React.FC<FooterSectionProps> = () => {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -19,7 +16,7 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
     <footer id="contact" className="relative w-full bg-[#080808] border-t border-white/10 px-6 md:px-12 py-16 sm:py-24 text-[#D7E2EA] z-20">
       <div className="max-w-6xl mx-auto flex flex-col justify-between gap-12 sm:gap-16">
         {/* Top Call to Action */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+        <div className="flex flex-col items-start gap-8">
           <FadeIn delay={0.1} y={20}>
             <div className="space-y-2">
               <div className="inline-flex items-center gap-2 text-xs uppercase tracking-widest text-[#B600A8] font-bold">
@@ -32,12 +29,6 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
               <p className="text-[#8F98A7] text-sm sm:text-base max-w-lg font-light">
                 Let&apos;s build worlds, characters, and digital motion that captivate audiences and elevate your brand.
               </p>
-            </div>
-          </FadeIn>
-
-          <FadeIn delay={0.2} y={20}>
-            <div className="flex items-center gap-4">
-              <ContactButton onClick={onOpenContact} label="Start a Project" />
             </div>
           </FadeIn>
         </div>
