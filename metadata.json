@@ -1,0 +1,6 @@
+{
+  "name": "Jaswanth -- 3D Creator",
+  "description": "Portfolio landing page for Jaswanth, a 3D creator driven by crafting striking and unforgettable 3D modeling, rendering, motion design, and branding projects.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
