@@ -5,30 +5,27 @@ import { ServiceItem } from '../types';
 const SERVICES: ServiceItem[] = [
   {
     number: '01',
-    name: '3D Modeling',
-    description:
-      'Creation of detailed objects, characters, or environments tailored to specific client needs, ideal for games, products, and visualizations.',
-    tags: ['Cinema 4D', 'Blender', 'Hard Surface', 'Characters'],
+    name: 'Web Development',
+    description: '',
+    tags: ['React', 'TypeScript', 'Tailwind CSS', 'Full Stack'],
   },
   {
     number: '02',
-    name: 'Rendering',
+    name: 'Full Stack Development',
     description:
-      'High-quality, photorealistic renders that showcase designs with custom lighting, textures, and materials to bring concepts to life.',
-    tags: ['Octane', 'Redshift', 'Cycles', 'Ray Tracing'],
+      "Build and maintain a website's front end and back end.",
+    tags: ['Node.js', 'Express', 'APIs', 'Databases', 'Cloud'],
   },
   {
     number: '03',
-    name: 'Motion Design',
-    description:
-      'Dynamic animations and motion graphics that add energy and storytelling to brands, products, and digital experiences.',
-    tags: ['After Effects', 'Houdini', 'Simulations', 'Loops'],
+    name: 'AI Agents',
+    description: '',
+    tags: ['LLMs', 'Autonomous Agents', 'LangChain', 'Workflows'],
   },
   {
     number: '04',
     name: 'Branding',
-    description:
-      'Crafting cohesive visual identities -- from logos to full brand systems -- that communicate a clear and memorable presence.',
+    description: '',
     tags: ['Brand Systems', 'Typography', 'Visual Strategy'],
   },
   {
@@ -83,12 +80,14 @@ export const ServicesSection: React.FC = () => {
                   >
                     {service.name}
                   </h3>
-                  <p
-                    className="font-light leading-relaxed max-w-2xl text-[#0C0C0C] opacity-60"
-                    style={{ fontSize: 'clamp(0.85rem, 1.6vw, 1.25rem)' }}
-                  >
-                    {service.description}
-                  </p>
+                  {service.description ? (
+                    <p
+                      className="font-light leading-relaxed max-w-2xl text-[#0C0C0C] opacity-60"
+                      style={{ fontSize: 'clamp(0.85rem, 1.6vw, 1.25rem)' }}
+                    >
+                      {service.description}
+                    </p>
+                  ) : null}
                 </div>
               </div>
             </FadeIn>

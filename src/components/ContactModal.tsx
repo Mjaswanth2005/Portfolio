@@ -11,7 +11,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    service: '3D Modeling',
+    service: 'Web Development',
     message: '',
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -65,7 +65,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
                 Let&apos;s Build Together
               </h2>
               <p className="text-sm sm:text-base text-[#9FA8B4] mt-2">
-                Have an ambitious 3D, branding, or motion project in mind? Drop a message below to connect.
+                Have an ambitious web, AI, or full stack project in mind? Drop a message below to connect.
               </p>
             </div>
 
@@ -113,18 +113,18 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
 
                 <div>
                   <label className="block text-xs uppercase tracking-wider text-[#9FA8B4] font-medium mb-1.5">
-                    Project Service
+                    Domain / Service of Interest
                   </label>
                   <select
                     value={formData.service}
                     onChange={(e) => setFormData({ ...formData, service: e.target.value })}
                     className="w-full px-4 py-2.5 rounded-xl bg-[#181C23] border border-[#2B313C] focus:border-[#B600A8] focus:outline-none text-white text-sm cursor-pointer"
                   >
-                    <option value="3D Modeling">3D Modeling</option>
-                    <option value="Rendering">Rendering & Shading</option>
-                    <option value="Motion Design">Motion Design & Animation</option>
-                    <option value="Branding">Full 3D Brand Identity</option>
-                    <option value="Web Design">Web 3D & Design</option>
+                    <option value="Web Development">Web Development</option>
+                    <option value="Full Stack Development">Full Stack Development</option>
+                    <option value="AI Agents">AI Agents</option>
+                    <option value="ML Models">Machine Learning (ML Models)</option>
+                    <option value="Web Design">Web Design & UI/UX</option>
                   </select>
                 </div>
 
