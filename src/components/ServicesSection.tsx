@@ -50,10 +50,10 @@ export const ServicesSection: React.FC = () => {
         {/* Heading */}
         <FadeIn delay={0} y={40} className="text-center mb-16 sm:mb-20 md:mb-28">
           <h2
-            className="text-[#0C0C0C] font-black uppercase tracking-tight leading-none text-center"
-            style={{ fontSize: 'clamp(3rem, 12vw, 160px)' }}
+            className="text-[#0C0C0C] font-black uppercase tracking-tight leading-tight text-center"
+            style={{ fontSize: 'clamp(2.2rem, 6.5vw, 90px)' }}
           >
-            Services
+            Domains Interested to work
           </h2>
         </FadeIn>
 

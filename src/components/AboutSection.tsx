@@ -76,7 +76,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onOpenContact }) => 
 
         {/* Gap between heading and text: gap-10 sm:gap-14 md:gap-16 */}
         <div className="mt-10 sm:mt-14 md:mt-16 w-full">
-          <AnimatedText text="With more than five years of experience in design, i focus on branding, web design, and user experience, i truly enjoy working with businesses that aim to stand out and present their best image. Let's build something incredible together!" />
+          <AnimatedText text="With more than a year of experience in design and building, I focus on web development, web design, full stack development, building small ML models and AI agents, I truly enjoy working with these projects. Let's build something incredible together" />
         </div>
 
         {/* Gap between text block and button: gap-16 sm:gap-20 md:gap-24 */}
