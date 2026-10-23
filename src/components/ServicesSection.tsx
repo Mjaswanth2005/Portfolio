@@ -1,41 +1,5 @@
 import React from 'react';
 import { FadeIn } from './FadeIn';
-import { ServiceItem } from '../types';
-
-const SERVICES: ServiceItem[] = [
-  {
-    number: '01',
-    name: 'Web Development',
-    description: '',
-    tags: ['React', 'TypeScript', 'Tailwind CSS', 'Full Stack'],
-  },
-  {
-    number: '02',
-    name: 'Full Stack Development',
-    description:
-      "Build and maintain a website's front end and back end.",
-    tags: ['Node.js', 'Express', 'APIs', 'Databases', 'Cloud'],
-  },
-  {
-    number: '03',
-    name: 'AI Agents',
-    description: '',
-    tags: ['LLMs', 'Autonomous Agents', 'LangChain', 'Workflows'],
-  },
-  {
-    number: '04',
-    name: 'Branding',
-    description: '',
-    tags: ['Brand Systems', 'Typography', 'Visual Strategy'],
-  },
-  {
-    number: '05',
-    name: 'Web Design',
-    description:
-      'Designing clean, modern, and conversion-focused websites with attention to layout, typography, and user experience.',
-    tags: ['Interactive 3D', 'WebGL', 'Figma', 'UI/UX'],
-  },
-];
 
 export const ServicesSection: React.FC = () => {
   return (
@@ -45,7 +9,7 @@ export const ServicesSection: React.FC = () => {
     >
       <div className="max-w-5xl mx-auto">
         {/* Heading */}
-        <FadeIn delay={0} y={40} className="text-center mb-16 sm:mb-20 md:mb-28">
+        <FadeIn delay={0} y={40} className="text-center mb-12 sm:mb-16 md:mb-20">
           <h2
             className="text-[#0C0C0C] font-black uppercase tracking-tight leading-tight text-center"
             style={{ fontSize: 'clamp(2.2rem, 6.5vw, 90px)' }}
@@ -54,45 +18,23 @@ export const ServicesSection: React.FC = () => {
           </h2>
         </FadeIn>
 
-        {/* 5 Service items in vertical list */}
-        <div className="divide-y divide-[#0C0C0C]/15 border-t border-b border-[#0C0C0C]/15">
-          {SERVICES.map((service, index) => (
-            <FadeIn
-              key={service.number}
-              delay={index * 0.1}
-              y={30}
-              className="py-8 sm:py-10 md:py-12"
-            >
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 sm:gap-10 md:gap-16">
-                {/* Huge Number */}
-                <span
-                  className="font-black text-[#0C0C0C] leading-none shrink-0 tracking-tighter"
-                  style={{ fontSize: 'clamp(3rem, 10vw, 140px)' }}
-                >
-                  {service.number}
-                </span>
-
-                {/* Name + Description stacked vertically */}
-                <div className="flex-1 space-y-2 sm:space-y-3">
-                  <h3
-                    className="font-medium uppercase tracking-tight text-[#0C0C0C]"
-                    style={{ fontSize: 'clamp(1rem, 2.2vw, 2.1rem)' }}
-                  >
-                    {service.name}
-                  </h3>
-                  {service.description ? (
-                    <p
-                      className="font-light leading-relaxed max-w-2xl text-[#0C0C0C] opacity-60"
-                      style={{ fontSize: 'clamp(0.85rem, 1.6vw, 1.25rem)' }}
-                    >
-                      {service.description}
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-            </FadeIn>
-          ))}
-        </div>
+        {/* Embedded Motion Design Reel */}
+        <FadeIn delay={0.15} y={30}>
+          <div className="relative rounded-2xl md:rounded-3xl border border-[#0C0C0C]/15 bg-white shadow-xl shadow-black/5 overflow-hidden">
+            <div className="relative aspect-video w-full bg-[#FFFFFF] overflow-hidden">
+              <video
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+              >
+                <source src="/domains_motion_loop.webm" type="video/webm" />
+                <source src="/domains_motion_loop.mp4" type="video/mp4" />
+              </video>
+            </div>
+          </div>
+        </FadeIn>
       </div>
     </section>
   );

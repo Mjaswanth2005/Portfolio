@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Domains Interested To Work - Motion Design</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      background: #FFFFFF;
+      font-family: 'Kanit', sans-serif;
+    }
+    #canvas {
+      width: 1920px;
+      height: 1080px;
+      display: block;
+      background: #FFFFFF;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="1920" height="1080"></canvas>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    function clamp(val, min = 0, max = 1) {
+      return Math.max(min, Math.min(max, val));
+    }
+
+    function easeOutExpo(x) {
+      return x >= 1 ? 1 : 1 - Math.pow(2, -10 * x);
+    }
+
+    function easeInExpo(x) {
+      return x <= 0 ? 0 : Math.pow(2, 10 * x - 10);
+    }
+
+    function easeInOutExpo(x) {
+      if (x <= 0) return 0;
+      if (x >= 1) return 1;
+      return x < 0.5 ? Math.pow(2, 20 * x - 10) / 2 : (2 - Math.pow(2, -20 * x + 10)) / 2;
+    }
+
+    function easeOutCubic(x) {
+      return 1 - Math.pow(1 - x, 3);
+    }
+
+    function easeInCubic(x) {
+      return x * x * x;
+    }
+
+    function easeInOutCubic(x) {
+      return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+    }
+
+    function snapSpring(t, omega = 14) {
+      if (t <= 0) return 0;
+      return 1 - (1 + omega * t) * Math.exp(-omega * t);
+    }
+
+    // Draw Sleek Minimal Vector Arrow Cursor
+    function drawCursor(ctx, x, y, scale = 1, isClicking = false) {
+      ctx.save();
+      ctx.translate(x, y);
+      const s = scale * (isClicking ? 0.88 : 1);
+      ctx.scale(s, s);
+      
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, 32);
+      ctx.lineTo(8.5, 24);
+      ctx.lineTo(16, 38);
+      ctx.lineTo(22, 35);
+      ctx.lineTo(14.5, 21);
+      ctx.lineTo(25, 21);
+      ctx.closePath();
+
+      ctx.fillStyle = '#0C0C0C';
+      ctx.fill();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Draw Isometric Slab (3D Layer)
+    function drawIsoSlab(ctx, cx, cy, width, depth, height, label, isHighlighted) {
+      ctx.save();
+      ctx.translate(cx, cy);
+
+      const hw = width / 2;
+      const hd = depth / 2;
+
+      // Project 3D (x, z) to 2D isometric:
+      // screenX = (x - z) * cos(30°)
+      // screenY = (x + z) * sin(30°)
+      const cos30 = 0.866;
+      const sin30 = 0.5;
+
+      const p0 = { x: (0 - 0) * cos30, y: -hd * sin30 };
+      const p1 = { x: hw * cos30, y: 0 };
+      const p2 = { x: 0, y: hd * sin30 };
+      const p3 = { x: -hw * cos30, y: 0 };
+
+      // Bottom face / sides for 3D extrusion
+      ctx.beginPath();
+      ctx.moveTo(p3.x, p3.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.lineTo(p2.x, p2.y + height);
+      ctx.lineTo(p3.x, p3.y + height);
+      ctx.closePath();
+      ctx.fillStyle = '#E5E5E5';
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#0C0C0C';
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(p2.x, p2.y);
+      ctx.lineTo(p1.x, p1.y);
+      ctx.lineTo(p1.x, p1.y + height);
+      ctx.lineTo(p2.x, p2.y + height);
+      ctx.closePath();
+      ctx.fillStyle = '#CCCCCC';
+      ctx.fill();
+      ctx.stroke();
+
+      // Top face
+      ctx.beginPath();
+      ctx.moveTo(p0.x, p0.y);
+      ctx.lineTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.lineTo(p3.x, p3.y);
+      ctx.closePath();
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fill();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = isHighlighted ? '#B600A8' : '#0C0C0C';
+      ctx.stroke();
+
+      // Text label centered on top face
+      ctx.font = '700 20px Kanit';
+      ctx.fillStyle = isHighlighted ? '#B600A8' : '#0C0C0C';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, 0, 0);
+
+      ctx.restore();
+    }
+
+    // Color definitions
+    const C_BLACK = '#0C0C0C';
+    const C_WHITE = '#FFFFFF';
+    const C_ACCENT = '#B600A8'; // Signature vivid magenta
+    const C_RULE = 'rgba(12, 12, 12, 0.18)';
+    const C_RULE_DARK = 'rgba(12, 12, 12, 0.45)';
+
+    function renderFrame(time) {
+      // Periodic time in [0, 15)
+      let t = time % 15.0;
+      if (t < 0) t += 15.0;
+
+      // Clear background
+      ctx.fillStyle = C_WHITE;
+      ctx.fillRect(0, 0, 1920, 1080);
+
+      // Camera: consistent, slow 2D push-in (scale 1.0 to 1.035)
+      ctx.save();
+      const cameraScale = 1.0 + 0.035 * (t / 15.0);
+      ctx.translate(960, 540);
+      ctx.scale(cameraScale, cameraScale);
+      ctx.translate(-960, -540);
+
+      // Persistent framing lines & metadata
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = C_RULE;
+      ctx.beginPath();
+      ctx.moveTo(120, 140);
+      ctx.lineTo(1800, 140);
+      ctx.moveTo(120, 940);
+      ctx.lineTo(1800, 940);
+      ctx.stroke();
+
+      ctx.font = '300 15px Kanit';
+      ctx.fillStyle = 'rgba(12, 12, 12, 0.55)';
+      ctx.textAlign = 'left';
+      ctx.fillText('JASWANTH  —  MOTION DESIGN', 120, 118);
+
+      ctx.font = '600 15px Kanit';
+      ctx.fillStyle = C_BLACK;
+      ctx.textAlign = 'right';
+      ctx.fillText('120 BPM  /  4/4', 1800, 118);
+      ctx.textAlign = 'left';
+
+      // =========================================================================
+      // SCENE 0: HOOK [t = 0.0 to 2.0]
+      // =========================================================================
+      if (t < 2.2) {
+        // Slam in: scale 1.08 to 1.0
+        const slam = snapSpring(clamp(t / 0.4));
+        const headingScale = 1.08 - 0.08 * slam;
+
+        // Beat 2: 1.0 to 1.5 - Horizontal split along center
+        const splitP = clamp((t - 1.0) / 0.5);
+        const splitOffset = easeInExpo(splitP) * 340;
+        const fadeOut = 1 - easeInExpo(clamp((t - 1.45) / 0.45));
+
+        ctx.save();
+        ctx.globalAlpha = fadeOut;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Top half
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 0, 1920, 540 - splitOffset);
+        ctx.clip();
+        ctx.translate(960, 540 - splitOffset);
+        ctx.scale(headingScale, headingScale);
+        ctx.font = '900 108px Kanit';
+        ctx.fillStyle = C_BLACK;
+        ctx.fillText('DOMAINS INTERESTED TO WORK', 0, 0);
+        ctx.restore();
+
+        // Bottom half
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 540 + splitOffset, 1920, 540);
+        ctx.clip();
+        ctx.translate(960, 540 + splitOffset);
+        ctx.scale(headingScale, headingScale);
+        ctx.font = '900 108px Kanit';
+        ctx.fillStyle = C_BLACK;
+        ctx.fillText('DOMAINS INTERESTED TO WORK', 0, 0);
+        ctx.restore();
+
+        // Moving accent dot
+        if (t >= 0.4 && t < 1.4) {
+          const dotP = clamp((t - 0.4) * 8);
+          ctx.beginPath();
+          ctx.arc(775, 540, 9 * dotP, 0, Math.PI * 2);
+          ctx.fillStyle = C_ACCENT;
+          ctx.fill();
+        }
+        ctx.restore();
+
+        // Horizontal divider lines drawing across (Beat 3: 1.5 to 2.0)
+        if (t >= 1.4) {
+          const lineP = easeOutExpo(clamp((t - 1.4) / 0.55));
+          ctx.strokeStyle = C_BLACK;
+          ctx.lineWidth = 2;
+          const leftW = 960 * lineP;
+          ctx.beginPath();
+          ctx.moveTo(960 - leftW, 360);
+          ctx.lineTo(960 + leftW, 360);
+          ctx.moveTo(960 - leftW, 720);
+          ctx.lineTo(960 + leftW, 720);
+          ctx.stroke();
+        }
+      }
+
+      // =========================================================================
+      // SCENE 1: 01 WEB DEVELOPMENT [t = 2.0 to 4.4]
+      // =========================================================================
+      if (t >= 1.8 && t < 4.7) {
+        const sceneT = t - 2.0;
+        const entryP = snapSpring(clamp(sceneT / 0.45));
+        const exitP = easeInExpo(clamp((sceneT - 1.9) / 0.45));
+
+        ctx.save();
+        ctx.globalAlpha = clamp((t - 1.8) * 8) * (1 - exitP);
+
+        // Kerning & Code transformation:
+        // sceneT 0.0 to 0.5: tight numeral "01" (spacing = 80)
+        // sceneT 0.5 to 1.1: splits into < and > (spacing expands to 520)
+        // sceneT 0.8 to 1.8: code typed inside
+        // sceneT 1.8 to 2.4: collapses inward
+        const splitP = easeInOutCubic(clamp((sceneT - 0.45) / 0.6));
+        const collapseP = easeInCubic(clamp((sceneT - 1.8) / 0.5));
+        const spacing = 80 + splitP * 460 - collapseP * 540;
+
+        // Left angle bracket `<`
+        ctx.save();
+        ctx.translate(960 - spacing, 500);
+        ctx.font = '900 240px Kanit';
+        ctx.fillStyle = C_BLACK;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(splitP < 0.25 ? '0' : '<', 0, 0);
+        ctx.restore();
+
+        // Right angle bracket `>`
+        ctx.save();
+        ctx.translate(960 + spacing, 500);
+        ctx.font = '900 240px Kanit';
+        ctx.fillStyle = C_BLACK;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(splitP < 0.25 ? '1' : '>', 0, 0);
+        ctx.restore();
+
+        // Kinetic code line typing inside
+        if (splitP > 0.3 && collapseP < 0.95) {
+          ctx.save();
+          ctx.translate(960, 500);
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+
+          const fullCode = 'main build={jaswanth.ai} /';
+          const typeProgress = clamp((sceneT - 0.7) / 0.9);
+          const charCount = Math.floor(typeProgress * fullCode.length);
+          const typedText = fullCode.slice(0, charCount);
+
+          ctx.font = '700 48px monospace';
+          ctx.fillStyle = C_BLACK;
+          ctx.fillText(typedText, -10, 0);
+
+          // Active accent cursor
+          const m = ctx.measureText(typedText);
+          const cursorX = -10 + m.width / 2 + 12;
+          ctx.fillStyle = C_ACCENT;
+          ctx.fillRect(cursorX, -24, 14, 48);
+
+          ctx.restore();
+        }
+
+        // Domain caption
+        ctx.font = '900 40px Kanit';
+        ctx.fillStyle = C_BLACK;
+        ctx.textAlign = 'center';
+        ctx.fillText('01  /  WEB DEVELOPMENT', 960, 780);
+
+        ctx.font = '300 20px Kanit';
+        ctx.fillStyle = 'rgba(12, 12, 12, 0.6)';
+        ctx.fillText('KINETIC SYNTAX & ARCHITECTURE', 960, 820);
+
+        ctx.restore();
+      }
+
+      // =========================================================================
+      // SCENE 2: 02 FULL STACK DEVELOPMENT [t = 4.4 to 6.8]
+      // =========================================================================
+      if (t >= 4.2 && t < 7.1) {
+        const sceneT = t - 4.4;
+        const entryP = snapSpring(clamp(sceneT / 0.45));
+        const exitP = easeInExpo(clamp((sceneT - 1.95) / 0.45));
+
+        ctx.save();
+        ctx.globalAlpha = clamp((t - 4.2) * 8) * (1 - exitP);
+
+        // 2D-to-3D moment:
+        // sceneT 0.0 to 0.6: 2D numeral "02"
+        // sceneT 0.6 to 1.3: expands into 3-layer 3D isometric stack
+        // sceneT 1.3 to 1.9: data packet pulse down the vertical bus
+        // sceneT 1.9 to 2.4: stack collapses into nodes for 03
+        const isoP = easeInOutCubic(clamp((sceneT - 0.5) / 0.7));
+        const pulseP = clamp((sceneT - 1.25) / 0.65);
+
+        if (isoP < 0.15) {
+          ctx.font = '900 240px Kanit';
+          ctx.fillStyle = C_BLACK;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('02', 960, 480);
+        } else {
+          const spreadY = isoP * 110;
+          const slabW = 420;
+          const slabD = 240;
+          const slabH = 22;
+
+          // Corner bus lines linking the 3 layers
+          const cos30 = 0.866;
+          const sin30 = 0.5;
+          const topCornerX = (slabW / 2) * cos30;
+          const leftCornerX = -(slabW / 2) * cos30;
+          const topY = 480 - spreadY;
+          const botY = 480 + spreadY;
+
+          ctx.strokeStyle = C_RULE_DARK;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(960 + topCornerX, topY);
+          ctx.lineTo(960 + topCornerX, botY);
+          ctx.moveTo(960 + leftCornerX, topY);
+          ctx.lineTo(960 + leftCornerX, botY);
+          ctx.moveTo(960, topY - (slabD / 2) * sin30);
+          ctx.lineTo(960, botY - (slabD / 2) * sin30);
+          ctx.stroke();
+
+          // Render 3 Isometric Slabs (Bottom, Middle, Top)
+          drawIsoSlab(ctx, 960, 480 + spreadY, slabW, slabD, slabH, 'PERSISTENCE [POSTGRES]', false);
+          drawIsoSlab(ctx, 960, 480, slabW, slabD, slabH, 'API ENGINE [NODE.JS]', (pulseP > 0.35 && pulseP < 0.7));
+          drawIsoSlab(ctx, 960, 480 - spreadY, slabW, slabD, slabH, 'CLIENT FRONTEND [REACT]', false);
+
+          // Glowing accent data packet moving through the stack
+          if (pulseP > 0 && pulseP < 1) {
+            const py = topY + pulseP * (botY - topY);
+            ctx.beginPath();
+            ctx.arc(960 + topCornerX, py, 9, 0, Math.PI * 2);
+            ctx.arc(960 + leftCornerX, py, 9, 0, Math.PI * 2);
+            ctx.fillStyle = C_ACCENT;
+            ctx.fill();
+          }
+        }
+
+        ctx.font = '900 40px Kanit';
+        ctx.fillStyle = C_BLACK;
+        ctx.textAlign = 'center';
+        ctx.fillText('02  /  FULL STACK DEVELOPMENT', 960, 780);
+
+        ctx.font = '300 20px Kanit';
+        ctx.fillStyle = 'rgba(12, 12, 12, 0.6)';
+        ctx.fillText('ISOMETRIC ARCHITECTURE & SYSTEM INTEGRATION', 960, 820);
+
+        ctx.restore();
+      }
+
+      // =========================================================================
+      // SCENE 3: 03 AI AGENTS [t = 6.8 to 9.2]
+      // =========================================================================
+      if (t >= 6.6 && t < 9.5) {
+        const sceneT = t - 6.8;
+        const entryP = snapSpring(clamp(sceneT / 0.45));
+        const exitP = easeInExpo(clamp((sceneT - 1.95) / 0.45));
+
+        ctx.save();
+        ctx.globalAlpha = clamp((t - 6.6) * 8) * (1 - exitP);
+
+        // Data moment: 03 transforms into autonomous agent graph
+        const graphP = easeInOutCubic(clamp((sceneT - 0.45) / 0.7));
+        const signalP = clamp((sceneT - 1.0) / 0.9);
+
+        if (graphP < 0.15) {
+          ctx.font = '900 240px Kanit';
+          ctx.fillStyle = C_BLACK;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('03', 960, 480);
+        } else {
+          const spread = graphP * 260;
+          const nodes = [
+            { name: 'PERCEIVER', x: 960 - spread, y: 480, labelX: -55, labelY: 0, align: 'right' },
+            { name: 'PLANNER', x: 960, y: 480 - spread * 0.75, labelX: 0, labelY: -50, align: 'center' },
+            { name: 'CRITIC', x: 960 + spread, y: 480, labelX: 55, labelY: 0, align: 'left' },
+            { name: 'TOOL EXEC', x: 960, y: 480 + spread * 0.75, labelX: 0, labelY: 55, align: 'center' }
+          ];
+
+          const edges = [
+            [nodes[0], nodes[1]],
+            [nodes[1], nodes[2]],
+            [nodes[2], nodes[3]],
+            [nodes[3], nodes[0]],
+            [nodes[1], nodes[3]]
+          ];
+
+          // Draw graph edges
+          ctx.lineWidth = 2.5;
+          ctx.strokeStyle = C_BLACK;
+          edges.forEach(([n1, n2]) => {
+            ctx.beginPath();
+            ctx.moveTo(n1.x, n1.y);
+            ctx.lineTo(n2.x, n2.y);
+            ctx.stroke();
+          });
+
+          // Draw Nodes
+          nodes.forEach((node) => {
+            ctx.save();
+            ctx.translate(node.x, node.y);
+            ctx.beginPath();
+            ctx.arc(0, 0, 36, 0, Math.PI * 2);
+            ctx.fillStyle = C_WHITE;
+            ctx.fill();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = C_BLACK;
+            ctx.stroke();
+
+            // Inner core
+            ctx.beginPath();
+            ctx.arc(0, 0, 10, 0, Math.PI * 2);
+            ctx.fillStyle = C_BLACK;
+            ctx.fill();
+
+            // Clean outside labels
+            ctx.font = '700 18px Kanit';
+            ctx.fillStyle = C_BLACK;
+            ctx.textAlign = node.align;
+            ctx.textBaseline = 'middle';
+            ctx.fillText(node.name, node.labelX, node.labelY);
+
+            ctx.restore();
+          });
+
+          // Moving signal packet along directed feedback loop
+          if (signalP > 0 && signalP < 1) {
+            const step = signalP * 4;
+            const edgeIndex = Math.min(3, Math.floor(step));
+            const localT = step - edgeIndex;
+            const e1 = edges[edgeIndex][0];
+            const e2 = edges[edgeIndex][1];
+            const px = e1.x + (e2.x - e1.x) * localT;
+            const py = e1.y + (e2.y - e1.y) * localT;
+
+            ctx.beginPath();
+            ctx.arc(px, py, 12, 0, Math.PI * 2);
+            ctx.fillStyle = C_ACCENT;
+            ctx.fill();
+          }
+        }
+
+        ctx.font = '900 40px Kanit';
+        ctx.fillStyle = C_BLACK;
+        ctx.textAlign = 'center';
+        ctx.fillText('03  /  AI AGENTS', 960, 780);
+
+        ctx.font = '300 20px Kanit';
+        ctx.fillStyle = 'rgba(12, 12, 12, 0.6)';
+        ctx.fillText('AUTONOMOUS MULTI-AGENT REASONING GRAPHS', 960, 820);
+
+        ctx.restore();
+      }
+
+      // =========================================================================
+      // SCENE 4: 04 BRANDING [t = 9.2 to 11.6]
+      // =========================================================================
+      if (t >= 9.0 && t < 11.9) {
+        const sceneT = t - 9.2;
+        const entryP = snapSpring(clamp(sceneT / 0.45));
+        const exitP = easeInExpo(clamp((sceneT - 1.95) / 0.45));
+
+        ctx.save();
+        ctx.globalAlpha = clamp((t - 9.0) * 8) * (1 - exitP);
+
+        // Shape morphing: 04 melts into geometric emblem then wordmark lockup
+        const morphP = easeInOutCubic(clamp((sceneT - 0.45) / 0.7));
+        const lockupP = easeInOutCubic(clamp((sceneT - 1.15) / 0.65));
+
+        const markCenterX = 960 - lockupP * 280;
+
+        ctx.save();
+        ctx.translate(markCenterX, 480);
+
+        if (morphP < 0.15) {
+          ctx.font = '900 240px Kanit';
+          ctx.fillStyle = C_BLACK;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('04', 0, 0);
+        } else {
+          // Architectural construction grid
+          if (morphP > 0.35) {
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = C_RULE_DARK;
+            ctx.strokeRect(-140, -140, 280, 280);
+            ctx.beginPath();
+            ctx.arc(0, 0, 140, 0, Math.PI * 2);
+            ctx.moveTo(-160, -160);
+            ctx.lineTo(160, 160);
+            ctx.moveTo(160, -160);
+            ctx.lineTo(-160, 160);
+            ctx.stroke();
+
+            // Accent anchor point
+            ctx.beginPath();
+            ctx.arc(0, -140, 8, 0, Math.PI * 2);
+            ctx.arc(140, 0, 8, 0, Math.PI * 2);
+            ctx.fillStyle = C_ACCENT;
+            ctx.fill();
+          }
+
+          // Bold solid geometric emblem
+          ctx.fillStyle = C_BLACK;
+          ctx.beginPath();
+          ctx.moveTo(-100, -100);
+          ctx.lineTo(100, -100);
+          ctx.lineTo(100, 100);
+          ctx.arc(0, 0, 100, 0, Math.PI * 0.5, true);
+          ctx.closePath();
+          ctx.fill();
+
+          // Cutout center
+          ctx.fillStyle = C_WHITE;
+          ctx.beginPath();
+          ctx.arc(0, 0, 48, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+
+        // Brand typography lockup
+        if (lockupP > 0.15) {
+          ctx.save();
+          ctx.translate(markCenterX + 160, 480);
+          ctx.globalAlpha = lockupP;
+          ctx.font = '900 68px Kanit';
+          ctx.fillStyle = C_BLACK;
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('JASWANTH', 0, -22);
+
+          ctx.font = '300 28px Kanit';
+          ctx.fillStyle = 'rgba(12, 12, 12, 0.7)';
+          ctx.letterSpacing = '6px';
+          ctx.fillText('STUDIO IDENTITY', 4, 32);
+          ctx.restore();
+        }
+
+        ctx.font = '900 40px Kanit';
+        ctx.fillStyle = C_BLACK;
+        ctx.textAlign = 'center';
+        ctx.fillText('04  /  BRANDING', 960, 780);
+
+        ctx.font = '300 20px Kanit';
+        ctx.fillStyle = 'rgba(12, 12, 12, 0.6)';
+        ctx.fillText('GEOMETRIC IDENTITY & TYPOGRAPHIC SYSTEMS', 960, 820);
+
+        ctx.restore();
+      }
+
+      // =========================================================================
+      // SCENE 5: 05 WEB DESIGN [t = 11.6 to 14.0]
+      // =========================================================================
+      if (t >= 11.4 && t < 13.95) {
+        const sceneT = t - 11.6;
+        const entryP = snapSpring(clamp(sceneT / 0.45));
+        const exitP = easeInExpo(clamp((t - 13.85) / 0.1));
+
+        ctx.save();
+        ctx.globalAlpha = clamp((t - 11.4) * 8) * (1 - exitP);
+
+        // UI moment: 05 unfolds into wireframe, cursor glides in and clicks button
+        const buildP = easeInOutCubic(clamp((sceneT - 0.4) / 0.75));
+        const cursorP = clamp((sceneT - 1.05) / 1.15);
+        const isClicked = t >= 13.8;
+
+        if (buildP < 0.15) {
+          ctx.font = '900 240px Kanit';
+          ctx.fillStyle = C_BLACK;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('05', 960, 480);
+        } else {
+          const frameW = 920 * buildP;
+          const frameH = 520 * buildP;
+          const fx = 960 - frameW / 2;
+          const fy = 470 - frameH / 2;
+
+          ctx.save();
+          ctx.strokeStyle = C_BLACK;
+          ctx.lineWidth = 2.5;
+          ctx.strokeRect(fx, fy, frameW, frameH);
+
+          // Top Navbar
+          ctx.beginPath();
+          ctx.moveTo(fx, fy + 60);
+          ctx.lineTo(fx + frameW, fy + 60);
+          ctx.stroke();
+
+          ctx.fillRect(fx + 30, fy + 22, 50, 16);
+          ctx.strokeRect(fx + frameW - 220, fy + 20, 50, 20);
+          ctx.strokeRect(fx + frameW - 150, fy + 20, 50, 20);
+          ctx.strokeRect(fx + frameW - 80, fy + 20, 50, 20);
+
+          // Hero headline bars
+          ctx.fillRect(fx + 60, fy + 120, frameW * 0.55, 32);
+          ctx.fillRect(fx + 60, fy + 165, frameW * 0.42, 24);
+
+          // Body text lines
+          ctx.fillStyle = 'rgba(12, 12, 12, 0.35)';
+          ctx.fillRect(fx + 60, fy + 220, frameW * 0.65, 12);
+          ctx.fillRect(fx + 60, fy + 242, frameW * 0.58, 12);
+          ctx.fillRect(fx + 60, fy + 264, frameW * 0.48, 12);
+
+          // Right Graphic Box
+          ctx.strokeStyle = C_RULE_DARK;
+          ctx.strokeRect(fx + frameW - 280, fy + 120, 220, 220);
+          ctx.beginPath();
+          ctx.moveTo(fx + frameW - 280, fy + 120);
+          ctx.lineTo(fx + frameW - 60, fy + 340);
+          ctx.moveTo(fx + frameW - 60, fy + 120);
+          ctx.lineTo(fx + frameW - 280, fy + 340);
+          ctx.stroke();
+
+          // CTA Pill Button: [ LET'S BUILD ]
+          const btnX = fx + 60;
+          const btnY = fy + 320;
+          const btnW = 220;
+          const btnH = 56;
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.roundRect(btnX, btnY, btnW, btnH, 28);
+
+          if (isClicked) {
+            // Button inverts into solid #B600A8 on click!
+            ctx.fillStyle = C_ACCENT;
+            ctx.fill();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = C_BLACK;
+            ctx.stroke();
+
+            ctx.font = '700 18px Kanit';
+            ctx.fillStyle = C_WHITE;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText("LET'S BUILD", btnX + btnW / 2, btnY + btnH / 2);
+
+            // Shockwave ring
+            const shockP = clamp((t - 13.8) / 0.2);
+            ctx.beginPath();
+            ctx.arc(btnX + btnW / 2, btnY + btnH / 2, shockP * 1600, 0, Math.PI * 2);
+            ctx.lineWidth = 8 * (1 - shockP);
+            ctx.strokeStyle = C_ACCENT;
+            ctx.stroke();
+          } else {
+            ctx.fillStyle = C_BLACK;
+            ctx.fill();
+            ctx.font = '700 18px Kanit';
+            ctx.fillStyle = C_WHITE;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText("LET'S BUILD", btnX + btnW / 2, btnY + btnH / 2);
+          }
+          ctx.restore();
+
+          // Vector Cursor gliding to button
+          if (cursorP > 0) {
+            const easeCurve = easeInOutCubic(cursorP);
+            const curStartX = 1680;
+            const curStartY = 920;
+            const curTargetX = btnX + btnW / 2;
+            const curTargetY = btnY + btnH / 2;
+
+            const curX = curStartX + (curTargetX - curStartX) * easeCurve;
+            const curY = curStartY + (curTargetY - curStartY) * easeCurve;
+
+            drawCursor(ctx, curX, curY, 1.25, isClicked);
+          }
+
+          ctx.restore();
+        }
+
+        ctx.font = '900 40px Kanit';
+        ctx.fillStyle = C_BLACK;
+        ctx.textAlign = 'center';
+        ctx.fillText('05  /  WEB DESIGN', 960, 780);
+
+        ctx.font = '300 20px Kanit';
+        ctx.fillStyle = 'rgba(12, 12, 12, 0.6)';
+        ctx.fillText('PRECISION INTERACTION & UI/UX', 960, 820);
+
+        ctx.restore();
+      }
+
+      // =========================================================================
+      // SCENE 6: END TITLE "JAS" + SEAMLESS LOOP [t = 14.0 to 15.0]
+      // Matches t = 0.0s exactly at t = 15.0s for an infinite loop!
+      // =========================================================================
+      if (t >= 13.85) {
+        const endT = t - 13.85;
+        const entryP = snapSpring(clamp(endT / 0.25));
+        const loopP = easeInOutCubic(clamp((t - 14.35) / 0.65)); // transforms into Frame 0
+
+        ctx.save();
+
+        if (loopP < 0.05) {
+          // Centered "JAS" + "AI + WEB"
+          ctx.save();
+          ctx.translate(960, 490);
+          ctx.scale(entryP, entryP);
+
+          ctx.font = '900 220px Kanit';
+          ctx.fillStyle = C_BLACK;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('JAS', 0, -30);
+
+          ctx.font = '800 48px Kanit';
+          ctx.letterSpacing = '8px';
+          ctx.fillText('AI + WEB', 0, 110);
+
+          // Accent dot placed cleanly after wordmark
+          const mWeb = ctx.measureText('AI + WEB');
+          const dotX = mWeb.width / 2 + 14;
+          ctx.beginPath();
+          ctx.arc(dotX, 102, 8, 0, Math.PI * 2);
+          ctx.fillStyle = C_ACCENT;
+          ctx.fill();
+
+          ctx.restore();
+        } else {
+          // Morph directly into exact Frame 0 state:
+          // "DOMAINS INTERESTED TO WORK" in Kanit 900 108px at (960, 540)
+          const interpScale = 1.0 + 0.08 * (1 - loopP);
+          ctx.save();
+          ctx.translate(960, 540);
+          ctx.scale(interpScale, interpScale);
+
+          ctx.font = '900 108px Kanit';
+          ctx.fillStyle = C_BLACK;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('DOMAINS INTERESTED TO WORK', 0, 0);
+
+          ctx.restore();
+        }
+
+        ctx.restore();
+      }
+
+      ctx.restore(); // restore camera
+    }
+
+    window.seek = function(t) {
+      renderFrame(t);
+    };
+
+    document.fonts.ready.then(() => {
+      window.seek(0.0);
+      window.__fontsLoaded = true;
+    });
+  </script>
+</body>
+</html>
