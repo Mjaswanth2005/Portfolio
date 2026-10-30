@@ -5,10 +5,10 @@
 
 import React, { useState } from 'react';
 import { HeroSection } from './components/HeroSection';
-import { MarqueeSection } from './components/MarqueeSection';
 import { AboutSection } from './components/AboutSection';
 import { ServicesSection } from './components/ServicesSection';
 import { ProjectsSection } from './components/ProjectsSection';
+import { CreativeWorkSection } from './components/CreativeWorkSection';
 import { FooterSection } from './components/FooterSection';
 import { ContactModal } from './components/ContactModal';
 import { PricingModal } from './components/PricingModal';
@@ -43,25 +43,33 @@ export default function App() {
       className="w-full min-h-screen bg-[#0C0C0C] text-[#D7E2EA] font-['Kanit',sans-serif]"
       style={{ overflowX: 'clip' }}
     >
-      {/* 1. HeroSection */}
-      <HeroSection
-        onOpenContact={handleOpenContact}
-        onOpenPricing={handleOpenPricing}
-      />
+      {/* Keyboard Accessibility: Skip to Main Content */}
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
 
-      {/* 2. MarqueeSection */}
-      <MarqueeSection />
+      {/* Semantic Main Landmark */}
+      <main id="main-content" className="w-full">
+        {/* 1. HeroSection with One-line Headline, 3 Proof Chips, and 2 CTAs */}
+        <HeroSection
+          onOpenContact={handleOpenContact}
+          onOpenPricing={handleOpenPricing}
+        />
 
-      {/* 3. AboutSection */}
-      <AboutSection onOpenContact={handleOpenContact} />
+        {/* 2. AboutSection (60-90 words plain text, what I build, problems I like, roles I want) */}
+        <AboutSection onOpenContact={handleOpenContact} />
 
-      {/* 4. ServicesSection */}
-      <ServicesSection />
+        {/* 3. Domains Interested to Work (5 Real Domains as Interactive Tags) */}
+        <ServicesSection />
 
-      {/* 5. ProjectsSection */}
-      <ProjectsSection onOpenProject={handleOpenProject} />
+        {/* 4. Primary Production AI & Agentic Systems */}
+        <ProjectsSection />
 
-      {/* Polish: Footer & Navigation Anchors */}
+        {/* 5. Secondary "Creative Work" Section (15s Motion Design Reel & Spatial Taste) */}
+        <CreativeWorkSection />
+      </main>
+
+      {/* 7. Footer & Contact Anchor */}
       <FooterSection
         onOpenContact={handleOpenContact}
         onOpenPricing={handleOpenPricing}

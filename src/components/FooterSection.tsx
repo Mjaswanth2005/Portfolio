@@ -24,10 +24,10 @@ export const FooterSection: React.FC<FooterSectionProps> = () => {
                 <span>Next Availability: Immediate</span>
               </div>
               <h3 className="text-3xl sm:text-5xl font-black uppercase text-white tracking-tight">
-                Ready to push the envelope?
+                Ready to build agents that work?
               </h3>
               <p className="text-[#8F98A7] text-sm sm:text-base max-w-lg font-light">
-                Let&apos;s build worlds, characters, and digital motion that captivate audiences and elevate your brand.
+                Targeting Forward Deployed Engineer and Agentic AI roles. Let&apos;s build intelligent systems that drive real enterprise impact.
               </p>
             </div>
           </FadeIn>
@@ -38,8 +38,8 @@ export const FooterSection: React.FC<FooterSectionProps> = () => {
 
         {/* Big Brand Typography */}
         <div className="overflow-hidden select-none px-2 w-full text-center">
-          <p className="hero-heading font-black uppercase tracking-tight text-center text-[5.5vw] sm:text-[6vw] md:text-[6.5vw] lg:text-[6.8vw] leading-none whitespace-nowrap opacity-40 hover:opacity-75 transition-opacity">
-            JASWANTH &bull; 3D CREATOR
+          <p className="hero-heading font-black uppercase tracking-tight text-center text-[4.8vw] sm:text-[5.2vw] md:text-[5.6vw] lg:text-[5.9vw] leading-none whitespace-nowrap opacity-40 hover:opacity-75 transition-opacity">
+            JASWANTH &bull; AI ENGINEER &bull; AGENTIC SYSTEMS
           </p>
         </div>
 
@@ -48,8 +48,8 @@ export const FooterSection: React.FC<FooterSectionProps> = () => {
           <button
             type="button"
             onClick={scrollToTop}
-            className="flex items-center gap-2 p-2 px-3 rounded-full bg-white/5 hover:bg-white/10 text-white transition-colors cursor-pointer"
-            aria-label="Back to top"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-white/5 hover:bg-white/10 text-white transition-colors cursor-pointer min-h-[44px]"
+            aria-label="Back to top of page"
           >
             <span>Top</span>
             <ArrowUp className="w-3.5 h-3.5" />

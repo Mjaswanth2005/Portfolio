@@ -15,6 +15,32 @@ export interface ProjectItem {
   liveUrl: string;
 }
 
+export interface AIProjectItem {
+  id: string;
+  number: string;
+  title: string;
+  category: 'Agentic Workflows' | 'LLM Pipelines & RAG' | 'Computer Vision' | 'Autonomous Systems';
+  tagline: string;
+  outcome: string;
+  description: string;
+  highlights: string[];
+  metrics: { label: string; value: string }[];
+  stack: string[];
+  liveUrl?: string;
+  githubUrl?: string;
+}
+
+export interface DomainItem {
+  id: string;
+  number: string;
+  name: string;
+  tag: string;
+  focus: string;
+  description: string;
+  technologies: string[];
+  capability: string;
+}
+
 export interface ServiceItem {
   number: string;
   name: string;

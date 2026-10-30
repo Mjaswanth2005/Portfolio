@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About Me 3D Motion - Dark Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #141414;
+      font-family: 'Kanit', sans-serif;
+    }
+    #canvas-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #141414;
+    }
+    canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+    }
+    #hud {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(20, 20, 20, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 9999px;
+      padding: 8px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      z-index: 100;
+      color: #FFFFFF;
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      user-select: none;
+      transition: opacity 0.3s;
+    }
+    #hud.hidden { display: none; }
+    #hud .time-display {
+      font-variant-numeric: tabular-nums;
+      color: rgba(255, 255, 255, 0.7);
+    }
+    #hud .shot-name {
+      font-weight: 700;
+      color: #FF5A00;
+    }
+  </style>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./vendor/three.module.js",
+      "three/addons/environments/RoomEnvironment.js": "./vendor/RoomEnvironment.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="canvas-container"></div>
+  <div id="hud">
+    <span class="shot-name" id="hud-shot">Shot 1: Macro Moon</span>
+    <span class="time-display" id="hud-time">0.0s / 15.0s</span>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const isRenderMode = urlParams.has('render') || urlParams.get('mode') === 'render';
+    if (isRenderMode) {
+      const hud = document.getElementById('hud');
+      if (hud) hud.classList.add('hidden');
+    }
+
+    const DURATION = 15.0; // 15 seconds seamless loop
+
+    function clamp(val, min = 0, max = 1) {
+      return Math.max(min, Math.min(max, val));
+    }
+    function easeInOutCubic(x) {
+      return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+    }
+    function easeOutCubic(x) {
+      return 1 - Math.pow(1 - x, 3);
+    }
+    function easeInCubic(x) {
+      return x * x * x;
+    }
+    function easeOutExpo(x) {
+      return x >= 1 ? 1 : 1 - Math.pow(2, -10 * x);
+    }
+    function dampedSpring(t, freq = 12, decay = 5) {
+      if (t < 0) return 0;
+      return Math.sin(t * freq) * Math.exp(-t * decay);
+    }
+
+    // Setup Three.js Renderer
+    const container = document.getElementById('canvas-container');
+    const width = isRenderMode ? 1920 : window.innerWidth;
+    const height = isRenderMode ? 1080 : window.innerHeight;
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: 'high-performance',
+      preserveDrawingBuffer: true
+    });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(isRenderMode ? 1 : Math.min(window.devicePixelRatio, 2));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.25;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    // Scene & Camera
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x141414);
+    scene.fog = new THREE.Fog(0x141414, 14, 45);
+
+    const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 60);
+
+    // Studio Environment via PMREMGenerator
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    pmremGenerator.compileEquirectangularShader();
+    const roomEnv = new RoomEnvironment();
+    scene.environment = pmremGenerator.fromScene(roomEnv, 0.05).texture;
+    pmremGenerator.dispose();
+
+    // ==========================================
+    // STUDIO SOFTBOXES & REFLECTION CARDS
+    // (Crucial for luxury glass & chrome highlights)
+    // ==========================================
+    const softboxMatWhite = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      side: THREE.DoubleSide
+    });
+    const softboxMatCyan = new THREE.MeshBasicMaterial({
+      color: 0x40d8ff,
+      side: THREE.DoubleSide
+    });
+    const softboxMatMagenta = new THREE.MeshBasicMaterial({
+      color: 0xff38d0,
+      side: THREE.DoubleSide
+    });
+
+    // 1. Overhead Key Softbox
+    const topSoftbox = new THREE.Mesh(new THREE.PlaneGeometry(18, 12), softboxMatWhite);
+    topSoftbox.position.set(0, 11, 2);
+    topSoftbox.rotation.x = Math.PI / 2;
+    scene.add(topSoftbox);
+
+    // 2. Left Front Rim Softbox (Cyan)
+    const leftSoftbox = new THREE.Mesh(new THREE.PlaneGeometry(3, 14), softboxMatCyan);
+    leftSoftbox.position.set(-11, 4, 3);
+    leftSoftbox.rotation.y = Math.PI * 0.35;
+    scene.add(leftSoftbox);
+
+    // 3. Right Front Rim Softbox (Magenta)
+    const rightSoftbox = new THREE.Mesh(new THREE.PlaneGeometry(3, 14), softboxMatMagenta);
+    rightSoftbox.position.set(11, 4, 3);
+    rightSoftbox.rotation.y = -Math.PI * 0.35;
+    scene.add(rightSoftbox);
+
+    // 4. Subtle Back Fill Card
+    const backFillCard = new THREE.Mesh(
+      new THREE.PlaneGeometry(30, 12),
+      new THREE.MeshBasicMaterial({ color: 0x22222a, side: THREE.DoubleSide })
+    );
+    backFillCard.position.set(0, 4, -12);
+    scene.add(backFillCard);
+
+    // ==========================================
+    // LIGHTING RIG
+    // ==========================================
+    const keyLight = new THREE.DirectionalLight(0xfff5ea, 3.2);
+    keyLight.position.set(6, 12, 9);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.width = 2048;
+    keyLight.shadow.mapSize.height = 2048;
+    keyLight.shadow.camera.near = 0.5;
+    keyLight.shadow.camera.far = 35;
+    keyLight.shadow.camera.left = -12;
+    keyLight.shadow.camera.right = 12;
+    keyLight.shadow.camera.top = 12;
+    keyLight.shadow.camera.bottom = -12;
+    keyLight.shadow.bias = -0.0004;
+    keyLight.shadow.normalBias = 0.02;
+    scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0x7898c0, 1.2);
+    fillLight.position.set(-8, 5, 8);
+    scene.add(fillLight);
+
+    const cyanRim = new THREE.DirectionalLight(0x00d8ff, 3.8);
+    cyanRim.position.set(-12, 7, -5);
+    scene.add(cyanRim);
+
+    const magentaRim = new THREE.DirectionalLight(0xff00b8, 3.6);
+    magentaRim.position.set(12, 6, -5);
+    scene.add(magentaRim);
+
+    // Traveling Warm Orange Light for the signature letters trace
+    const orangeTraceLight = new THREE.PointLight(0xff5a00, 0, 10, 2);
+    orangeTraceLight.position.set(0, 0, 2);
+    scene.add(orangeTraceLight);
+
+    // Small glowing orange spark mesh tracking the trace light
+    const sparkGeo = new THREE.SphereGeometry(0.08, 16, 16);
+    const sparkMat = new THREE.MeshBasicMaterial({ color: 0xffaa44 });
+    const sparkMesh = new THREE.Mesh(sparkGeo, sparkMat);
+    sparkMesh.visible = false;
+    scene.add(sparkMesh);
+
+    const hemiLight = new THREE.HemisphereLight(0x303644, 0x141414, 0.7);
+    scene.add(hemiLight);
+
+    // Stage Floor
+    const floorGeo = new THREE.PlaneGeometry(70, 70);
+    const floorMat = new THREE.MeshStandardMaterial({
+      color: 0x141414,
+      roughness: 0.55,
+      metalness: 0.25
+    });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -3.4;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    // Radial studio contact shadow
+    const contactCanvas = document.createElement('canvas');
+    contactCanvas.width = 512;
+    contactCanvas.height = 512;
+    const ctx = contactCanvas.getContext('2d');
+    const grad = ctx.createRadialGradient(256, 256, 10, 256, 256, 250);
+    grad.addColorStop(0, 'rgba(0, 0, 0, 0.9)');
+    grad.addColorStop(0.5, 'rgba(10, 10, 10, 0.45)');
+    grad.addColorStop(1, 'rgba(20, 20, 20, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 512, 512);
+    const contactTexture = new THREE.CanvasTexture(contactCanvas);
+    contactTexture.colorSpace = THREE.SRGBColorSpace;
+    const contactPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(28, 20),
+      new THREE.MeshBasicMaterial({
+        map: contactTexture,
+        transparent: true,
+        opacity: 0.8,
+        depthWrite: false
+      })
+    );
+    contactPlane.rotation.x = -Math.PI / 2;
+    contactPlane.position.y = -3.38;
+    scene.add(contactPlane);
+
+    // ==========================================
+    // PROCEDURAL GEOMETRIES & MATERIALS
+    // ==========================================
+
+    // 1. Crescent Moon Geometry (Silky Smooth curveSegments: 96)
+    function createMoonGeometry() {
+      const shape = new THREE.Shape();
+      const R_outer = 1.65;
+      const R_inner = 1.38;
+      const offset_x = 0.58;
+
+      shape.absarc(0, 0, R_outer, -Math.PI * 0.44, Math.PI * 0.44, false);
+      shape.absarc(offset_x, 0, R_inner, Math.PI * 0.44, -Math.PI * 0.44, true);
+
+      const geo = new THREE.ExtrudeGeometry(shape, {
+        depth: 0.42,
+        curveSegments: 96,
+        bevelEnabled: true,
+        bevelSegments: 8,
+        bevelSize: 0.14,
+        bevelThickness: 0.16
+      });
+      geo.center();
+      return geo;
+    }
+
+    const moonMaterial = new THREE.MeshPhysicalMaterial({
+      color: 0xbcd4ff,
+      transmission: 0.88,
+      opacity: 1,
+      transparent: true,
+      roughness: 0.05,
+      ior: 1.54,
+      thickness: 2.2,
+      attenuationColor: new THREE.Color(0x4078ff),
+      attenuationDistance: 1.6,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.03,
+      iridescence: 1.0,
+      iridescenceIOR: 1.42,
+      iridescenceThicknessRange: [180, 480],
+      reflectivity: 0.95
+    });
+    const moonMesh = new THREE.Mesh(createMoonGeometry(), moonMaterial);
+    moonMesh.castShadow = true;
+    moonMesh.receiveShadow = true;
+    scene.add(moonMesh);
+
+    // 2. Translucent Lego-Style Brick (Beveled Box + 4 Hollowed Studs)
+    function createLegoBrickGroup() {
+      const group = new THREE.Group();
+      const w = 1.9, h = 1.15, d = 1.9;
+
+      const shape = new THREE.Shape();
+      const r = 0.15;
+      shape.moveTo(-w/2 + r, -d/2);
+      shape.lineTo(w/2 - r, -d/2);
+      shape.quadraticCurveTo(w/2, -d/2, w/2, -d/2 + r);
+      shape.lineTo(w/2, d/2 - r);
+      shape.quadraticCurveTo(w/2, d/2, w/2 - r, d/2);
+      shape.lineTo(-w/2 + r, d/2);
+      shape.quadraticCurveTo(-w/2, d/2, -w/2, d/2 - r);
+      shape.lineTo(-w/2, -d/2 + r);
+      shape.quadraticCurveTo(-w/2, -d/2, -w/2 + r, -d/2);
+
+      const bodyGeo = new THREE.ExtrudeGeometry(shape, {
+        depth: h,
+        curveSegments: 32,
+        bevelEnabled: true,
+        bevelSegments: 5,
+        bevelSize: 0.08,
+        bevelThickness: 0.08
+      });
+      bodyGeo.center();
+
+      const brickMat = new THREE.MeshPhysicalMaterial({
+        color: 0x80e8ff,
+        transmission: 0.84,
+        transparent: true,
+        roughness: 0.06,
+        ior: 1.56,
+        thickness: 2.0,
+        attenuationColor: new THREE.Color(0x0090ff),
+        attenuationDistance: 1.4,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.04,
+        iridescence: 0.95,
+        iridescenceIOR: 1.38,
+        reflectivity: 0.9
+      });
+
+      const bodyMesh = new THREE.Mesh(bodyGeo, brickMat);
+      bodyMesh.rotation.x = Math.PI / 2;
+      bodyMesh.castShadow = true;
+      group.add(bodyMesh);
+
+      // 4 Studs with cylindrical bevel on top
+      const studGeo = new THREE.CylinderGeometry(0.34, 0.34, 0.32, 32);
+      const studOffsets = [
+        [-0.48, 0.48],
+        [0.48, 0.48],
+        [-0.48, -0.48],
+        [0.48, -0.48]
+      ];
+      studOffsets.forEach(([sx, sz]) => {
+        const stud = new THREE.Mesh(studGeo, brickMat);
+        stud.position.set(sx, h/2 + 0.16, sz);
+        stud.castShadow = true;
+        group.add(stud);
+      });
+
+      return group;
+    }
+
+    const brickGroup = createLegoBrickGroup();
+    scene.add(brickGroup);
+
+    // 3. Ring-Shaped Smiley Face (Torus with glossy violet-magenta glass)
+    function createSmileyRingGroup() {
+      const group = new THREE.Group();
+      const torusGeo = new THREE.TorusGeometry(1.25, 0.48, 48, 96);
+      const smileyMat = new THREE.MeshPhysicalMaterial({
+        color: 0xee99ff,
+        transmission: 0.85,
+        transparent: true,
+        roughness: 0.05,
+        ior: 1.55,
+        thickness: 2.2,
+        attenuationColor: new THREE.Color(0xb800e0),
+        attenuationDistance: 1.5,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.03,
+        iridescence: 1.0,
+        iridescenceIOR: 1.38,
+        reflectivity: 0.92
+      });
+      const torusMesh = new THREE.Mesh(torusGeo, smileyMat);
+      torusMesh.castShadow = true;
+      group.add(torusMesh);
+
+      // Liquid silver facial features
+      const featureMat = new THREE.MeshPhysicalMaterial({
+        color: 0xf5f7ff,
+        metalness: 0.96,
+        roughness: 0.08,
+        clearcoat: 1.0
+      });
+
+      // Eyes
+      const eyeGeo = new THREE.SphereGeometry(0.14, 24, 24);
+      const leftEye = new THREE.Mesh(eyeGeo, featureMat);
+      leftEye.position.set(-0.38, 0.36, 0.46);
+      group.add(leftEye);
+
+      const rightEye = new THREE.Mesh(eyeGeo, featureMat);
+      rightEye.position.set(0.38, 0.36, 0.46);
+      group.add(rightEye);
+
+      // Smile curved tube
+      const curve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(-0.46, -0.1, 0.44),
+        new THREE.Vector3(-0.25, -0.34, 0.48),
+        new THREE.Vector3(0, -0.40, 0.49),
+        new THREE.Vector3(0.25, -0.34, 0.48),
+        new THREE.Vector3(0.46, -0.1, 0.44)
+      ]);
+      const smileGeo = new THREE.TubeGeometry(curve, 32, 0.075, 12, false);
+      const smileMesh = new THREE.Mesh(smileGeo, featureMat);
+      group.add(smileMesh);
+
+      return group;
+    }
+
+    const smileyGroup = createSmileyRingGroup();
+    scene.add(smileyGroup);
+
+    // 4. Iconic Chrome Mouse Cursor Arrow (Asymmetrical Vector Contour)
+    function createCursorGeometry() {
+      const shape = new THREE.Shape();
+      // True asymmetric OS pointer contour
+      shape.moveTo(0, 0); // Tip
+      shape.lineTo(0, -2.1); // Left straight edge
+      shape.lineTo(0.55, -1.6); // Inner notch
+      shape.lineTo(1.05, -2.55); // Tail left corner
+      shape.lineTo(1.42, -2.38); // Tail bottom edge
+      shape.lineTo(0.92, -1.45); // Tail right junction
+      shape.lineTo(1.58, -1.45); // Right diagonal wing
+      shape.closePath(); // Return to tip
+
+      const geo = new THREE.ExtrudeGeometry(shape, {
+        depth: 0.32,
+        bevelEnabled: true,
+        bevelSegments: 5,
+        bevelSize: 0.07,
+        bevelThickness: 0.09
+      });
+      geo.center();
+      return geo;
+    }
+
+    const chromeCursorMat = new THREE.MeshPhysicalMaterial({
+      color: 0xffffff,
+      metalness: 1.0,
+      roughness: 0.03,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.02,
+      envMapIntensity: 3.5,
+      reflectivity: 1.0
+    });
+    const cursorMesh = new THREE.Mesh(createCursorGeometry(), chromeCursorMat);
+    cursorMesh.castShadow = true;
+    cursorMesh.receiveShadow = true;
+    scene.add(cursorMesh);
+
+    // 5. Gradient Pill Button (Deep Purple to Vibrant Orange)
+    function createPillButtonGroup() {
+      const group = new THREE.Group();
+      const width = 3.6, radius = 0.55, depth = 0.32;
+
+      const shape = new THREE.Shape();
+      const halfW = (width - radius * 2) / 2;
+      shape.moveTo(-halfW, radius);
+      shape.lineTo(halfW, radius);
+      shape.absarc(halfW, 0, radius, Math.PI / 2, -Math.PI / 2, true);
+      shape.lineTo(-halfW, -radius);
+      shape.absarc(-halfW, 0, radius, -Math.PI / 2, Math.PI / 2, true);
+
+      const pillGeo = new THREE.ExtrudeGeometry(shape, {
+        depth: depth,
+        curveSegments: 32,
+        bevelEnabled: true,
+        bevelSegments: 5,
+        bevelSize: 0.08,
+        bevelThickness: 0.08
+      });
+      pillGeo.center();
+
+      const gradCanvas = document.createElement('canvas');
+      gradCanvas.width = 512;
+      gradCanvas.height = 128;
+      const gctx = gradCanvas.getContext('2d');
+      const pGrad = gctx.createLinearGradient(0, 0, 512, 0);
+      pGrad.addColorStop(0, '#7928CA'); // Purple
+      pGrad.addColorStop(0.5, '#B600A8'); // Violet-magenta
+      pGrad.addColorStop(1, '#FF5A00'); // Orange accent
+      gctx.fillStyle = pGrad;
+      gctx.fillRect(0, 0, 512, 128);
+
+      const gradTexture = new THREE.CanvasTexture(gradCanvas);
+      gradTexture.colorSpace = THREE.SRGBColorSpace;
+
+      const pillMat = new THREE.MeshPhysicalMaterial({
+        map: gradTexture,
+        roughness: 0.12,
+        metalness: 0.25,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.04,
+        reflectivity: 0.95
+      });
+
+      const pillMesh = new THREE.Mesh(pillGeo, pillMat);
+      pillMesh.name = 'pillMesh';
+      pillMesh.castShadow = true;
+      group.add(pillMesh);
+
+      // Matching rounded stadium bezel base underneath
+      const baseShape = new THREE.Shape();
+      const baseR = radius + 0.1;
+      const baseHalfW = halfW + 0.05;
+      baseShape.moveTo(-baseHalfW, baseR);
+      baseShape.lineTo(baseHalfW, baseR);
+      baseShape.absarc(baseHalfW, 0, baseR, Math.PI / 2, -Math.PI / 2, true);
+      baseShape.lineTo(-baseHalfW, -baseR);
+      baseShape.absarc(-baseHalfW, 0, baseR, -Math.PI / 2, Math.PI / 2, true);
+
+      const baseGeo = new THREE.ExtrudeGeometry(baseShape, {
+        depth: 0.12,
+        curveSegments: 32,
+        bevelEnabled: true,
+        bevelSegments: 3,
+        bevelSize: 0.04,
+        bevelThickness: 0.04
+      });
+      baseGeo.center();
+      const baseMat = new THREE.MeshStandardMaterial({
+        color: 0x18181c,
+        roughness: 0.45,
+        metalness: 0.8
+      });
+      const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+      baseMesh.position.z = -0.16;
+      group.add(baseMesh);
+
+      return group;
+    }
+
+    const pillButtonGroup = createPillButtonGroup();
+    scene.add(pillButtonGroup);
+
+    // 6. Heavy 3D Extruded Letters "ABOUT ME" (Single Panoramic Line)
+    function createLetterShape(char) {
+      const s = new THREE.Shape();
+      const w = 1.05, h = 1.45;
+
+      if (char === 'A') {
+        s.moveTo(0.52, h);
+        s.lineTo(w, 0);
+        s.lineTo(0.72, 0);
+        s.lineTo(0.61, 0.44);
+        s.lineTo(0.41, 0.44);
+        s.lineTo(0.30, 0);
+        s.lineTo(0, 0);
+        s.closePath();
+
+        const hole = new THREE.Path();
+        hole.moveTo(0.52, h - 0.42);
+        hole.lineTo(0.44, 0.72);
+        hole.lineTo(0.60, 0.72);
+        hole.closePath();
+        s.holes.push(hole);
+      } else if (char === 'B') {
+        s.moveTo(0, 0);
+        s.lineTo(0, h);
+        s.lineTo(0.68, h);
+        s.quadraticCurveTo(w, h, w, h - 0.36);
+        s.quadraticCurveTo(w, h - 0.68, 0.72, h - 0.72);
+        s.quadraticCurveTo(w + 0.06, h - 0.76, w + 0.06, 0.36);
+        s.quadraticCurveTo(w + 0.06, 0, 0.68, 0);
+        s.closePath();
+
+        const h1 = new THREE.Path();
+        h1.moveTo(0.30, h - 0.30);
+        h1.lineTo(0.60, h - 0.30);
+        h1.quadraticCurveTo(0.74, h - 0.30, 0.74, h - 0.48);
+        h1.quadraticCurveTo(0.74, h - 0.66, 0.60, h - 0.66);
+        h1.lineTo(0.30, h - 0.66);
+        h1.closePath();
+        s.holes.push(h1);
+
+        const h2 = new THREE.Path();
+        h2.moveTo(0.30, 0.66);
+        h2.lineTo(0.64, 0.66);
+        h2.quadraticCurveTo(0.78, 0.66, 0.78, 0.38);
+        h2.quadraticCurveTo(0.78, 0.28, 0.64, 0.28);
+        h2.lineTo(0.30, 0.28);
+        h2.closePath();
+        s.holes.push(h2);
+      } else if (char === 'O') {
+        const rw = w * 0.54, rh = h * 0.5;
+        s.absellipse(rw, rh, rw, rh, 0, Math.PI * 2, false);
+        const hole = new THREE.Path();
+        hole.absellipse(rw, rh, rw * 0.52, rh * 0.56, 0, Math.PI * 2, true);
+        s.holes.push(hole);
+      } else if (char === 'U') {
+        s.moveTo(0, h);
+        s.lineTo(0.30, h);
+        s.lineTo(0.30, 0.50);
+        s.quadraticCurveTo(0.30, 0.28, 0.52, 0.28);
+        s.quadraticCurveTo(0.74, 0.28, 0.74, 0.50);
+        s.lineTo(0.74, h);
+        s.lineTo(w, h);
+        s.lineTo(w, 0.50);
+        s.quadraticCurveTo(w, 0, 0.52, 0);
+        s.quadraticCurveTo(0, 0, 0, 0.50);
+        s.closePath();
+      } else if (char === 'T') {
+        s.moveTo(0, h);
+        s.lineTo(w, h);
+        s.lineTo(w, h - 0.32);
+        s.lineTo(0.68, h - 0.32);
+        s.lineTo(0.68, 0);
+        s.lineTo(0.36, 0);
+        s.lineTo(0.36, h - 0.32);
+        s.lineTo(0, h - 0.32);
+        s.closePath();
+      } else if (char === 'M') {
+        s.moveTo(0, 0);
+        s.lineTo(0, h);
+        s.lineTo(0.38, h);
+        s.lineTo(0.58, 0.62);
+        s.lineTo(0.78, h);
+        s.lineTo(1.15, h);
+        s.lineTo(1.15, 0);
+        s.lineTo(0.88, 0);
+        s.lineTo(0.88, 0.68);
+        s.lineTo(0.70, 0.22);
+        s.lineTo(0.46, 0.22);
+        s.lineTo(0.28, 0.68);
+        s.lineTo(0.28, 0);
+        s.closePath();
+      } else if (char === 'E') {
+        s.moveTo(0, 0);
+        s.lineTo(0, h);
+        s.lineTo(w * 0.92, h);
+        s.lineTo(w * 0.92, h - 0.30);
+        s.lineTo(0.30, h - 0.30);
+        s.lineTo(0.30, 0.90);
+        s.lineTo(w * 0.80, 0.90);
+        s.lineTo(w * 0.80, 0.62);
+        s.lineTo(0.30, 0.62);
+        s.lineTo(0.30, 0.30);
+        s.lineTo(w * 0.92, 0.30);
+        s.lineTo(w * 0.92, 0);
+        s.closePath();
+      }
+      return s;
+    }
+
+    function createAboutMeTextGroup() {
+      const group = new THREE.Group();
+      const extrudeSettings = {
+        depth: 0.52,
+        bevelEnabled: true,
+        bevelSegments: 5,
+        bevelSize: 0.07,
+        bevelThickness: 0.08
+      };
+
+      const metalMat = new THREE.MeshPhysicalMaterial({
+        color: 0x9898a4,
+        metalness: 0.94,
+        roughness: 0.16,
+        clearcoat: 0.6,
+        clearcoatRoughness: 0.08,
+        reflectivity: 0.95
+      });
+
+      // Display "ABOUT ME" in one bold horizontal line
+      const chars = ['A', 'B', 'O', 'U', 'T', ' ', 'M', 'E'];
+      const charWidths = [1.2, 1.2, 1.2, 1.2, 1.2, 0.7, 1.35, 1.15];
+      const totalWidth = charWidths.reduce((a, b) => a + b, 0);
+      let currX = -totalWidth / 2;
+
+      chars.forEach((ch, idx) => {
+        if (ch !== ' ') {
+          const shape = createLetterShape(ch);
+          const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+          const mesh = new THREE.Mesh(geo, metalMat);
+          mesh.position.set(currX, -0.65, 0);
+          mesh.castShadow = true;
+          mesh.receiveShadow = true;
+          group.add(mesh);
+        }
+        currX += charWidths[idx];
+      });
+
+      return group;
+    }
+
+    const textGroup = createAboutMeTextGroup();
+    scene.add(textGroup);
+
+    // ==========================================
+    // CINEMATOGRAPHY & TIME-DRIVEN CHOREOGRAPHY
+    // ==========================================
+
+    // The signature final resting positions (matching the user's screenshot layout):
+    const POS_MOON_CORNER = new THREE.Vector3(-4.9, 2.3, 0.2);
+    const POS_BRICK_CORNER = new THREE.Vector3(4.9, 2.3, 0.2);
+    const POS_SMILEY_CORNER = new THREE.Vector3(-4.6, -2.1, 0.2);
+    const POS_CURSOR_CORNER = new THREE.Vector3(4.6, -2.1, 0.2);
+    const POS_PILL_BUTTON = new THREE.Vector3(0, -2.1, 0.5);
+
+    // Camera Macro Moon parameters (Shot 1 start & Shot 6 end)
+    const MACRO_CAM_POS = new THREE.Vector3(-4.1, 2.45, 2.0);
+    const MACRO_CAM_LOOK = new THREE.Vector3(-4.9, 2.3, 0.2);
+
+    const _camPos = new THREE.Vector3();
+    const _camLook = new THREE.Vector3();
+
+    window.seek = function(rawTime) {
+      const t = ((rawTime % DURATION) + DURATION) % DURATION;
+      let currentShotName = 'Shot 1: Macro Moon';
+
+      // ----------------------------------------------------
+      // SHOT 1: Macro on Moon [0.0s - 2.5s]
+      // ----------------------------------------------------
+      if (t < 2.5) {
+        const p = t / 2.5;
+        currentShotName = 'Shot 1: Macro Moon (Rack Focus)';
+        const ease = easeInOutCubic(p);
+
+        _camPos.set(
+          MACRO_CAM_POS.x + ease * 0.18,
+          MACRO_CAM_POS.y - ease * 0.12,
+          MACRO_CAM_POS.z - ease * 0.22
+        );
+        _camLook.copy(MACRO_CAM_LOOK);
+
+        moonMesh.position.copy(POS_MOON_CORNER);
+        moonMesh.rotation.set(0.2 + ease * 0.12, 0.35 + ease * 0.22, -0.15);
+        moonMesh.scale.set(1.2, 1.2, 1.2);
+
+        brickGroup.position.set(POS_BRICK_CORNER.x + 4, POS_BRICK_CORNER.y, -4);
+        smileyGroup.position.set(POS_SMILEY_CORNER.x - 4, POS_SMILEY_CORNER.y, -4);
+        cursorMesh.position.set(9, -2, 5);
+        cursorMesh.rotation.set(0.2, -0.3, 0.1);
+
+        textGroup.position.set(0, -12, 0);
+        pillButtonGroup.position.set(0, -12, 0);
+        orangeTraceLight.intensity = 0;
+        sparkMesh.visible = false;
+      }
+
+      // ----------------------------------------------------
+      // SHOT 2: Dolly Back & Corner Stage Drift [2.5s - 5.0s]
+      // ----------------------------------------------------
+      else if (t < 5.0) {
+        const p = (t - 2.5) / 2.5;
+        currentShotName = 'Shot 2: Dolly Back & Drift';
+        const ease = easeInOutCubic(p);
+
+        const startCam = new THREE.Vector3(MACRO_CAM_POS.x + 0.18, MACRO_CAM_POS.y - 0.12, MACRO_CAM_POS.z - 0.22);
+        const targetCam = new THREE.Vector3(0.5, 2.8, 12.0);
+        _camPos.lerpVectors(startCam, targetCam, ease);
+
+        const startLook = MACRO_CAM_LOOK.clone();
+        const targetLook = new THREE.Vector3(0, 0, 0);
+        _camLook.lerpVectors(startLook, targetLook, ease);
+
+        const moonSpring = dampedSpring(p - 0.2, 8, 4);
+        moonMesh.position.copy(POS_MOON_CORNER);
+        moonMesh.rotation.set(0.32 + moonSpring * 0.2, 0.57, -0.15 + moonSpring * 0.1);
+        moonMesh.scale.set(1.0, 1.0, 1.0);
+
+        // Chrome cursor swoops into frame from right, banking across the stage
+        const curEase = easeInOutCubic(p);
+        const curX = THREE.MathUtils.lerp(9, 2.2, curEase);
+        const curY = THREE.MathUtils.lerp(-2, 1.4, curEase);
+        const curZ = THREE.MathUtils.lerp(5, 1.6, curEase);
+        cursorMesh.position.set(curX, curY, curZ);
+        cursorMesh.rotation.set(0.25, -0.35, 0.25 + Math.sin(p * Math.PI) * 0.3);
+
+        brickGroup.position.lerpVectors(
+          new THREE.Vector3(POS_BRICK_CORNER.x + 4, POS_BRICK_CORNER.y, -4),
+          POS_BRICK_CORNER,
+          ease
+        );
+        brickGroup.rotation.set(0.4, -0.55 + ease * 0.2, 0.18);
+
+        smileyGroup.position.lerpVectors(
+          new THREE.Vector3(POS_SMILEY_CORNER.x - 4, POS_SMILEY_CORNER.y, -4),
+          POS_SMILEY_CORNER,
+          ease
+        );
+        smileyGroup.rotation.set(0.12, 0.38, 0);
+
+        textGroup.position.set(0, -12, 0);
+        pillButtonGroup.position.set(0, -12, 0);
+        orangeTraceLight.intensity = 0;
+        sparkMesh.visible = false;
+      }
+
+      // ----------------------------------------------------
+      // SHOT 3: Crane Up & Kinetic Bump [5.0s - 7.5s]
+      // ----------------------------------------------------
+      else if (t < 7.5) {
+        const p = (t - 5.0) / 2.5;
+        currentShotName = 'Shot 3: Crane Up & Brick Bump';
+        const ease = easeInOutCubic(p);
+
+        _camPos.set(
+          THREE.MathUtils.lerp(0.5, 2.0, ease),
+          THREE.MathUtils.lerp(2.8, 6.2, ease),
+          THREE.MathUtils.lerp(12.0, 9.2, ease)
+        );
+        _camLook.set(
+          THREE.MathUtils.lerp(0, 1.8, ease),
+          THREE.MathUtils.lerp(0, 1.2, ease),
+          0
+        );
+
+        // Cursor swings across and bumps the brick at p = 0.4 (t = 6.0s)
+        let curPos = new THREE.Vector3();
+        if (p < 0.4) {
+          const prep = p / 0.4;
+          const pe = easeOutCubic(prep);
+          curPos.set(
+            THREE.MathUtils.lerp(2.2, POS_BRICK_CORNER.x - 0.7, pe),
+            THREE.MathUtils.lerp(1.4, POS_BRICK_CORNER.y - 0.2, pe),
+            THREE.MathUtils.lerp(1.6, POS_BRICK_CORNER.z + 0.6, pe)
+          );
+          cursorMesh.rotation.set(0.2, -0.45, 0.35);
+        } else {
+          // Recoil & arc away toward button
+          const postp = (p - 0.4) / 0.6;
+          const pe = easeInOutCubic(postp);
+          curPos.set(
+            THREE.MathUtils.lerp(POS_BRICK_CORNER.x - 0.7, 0, pe),
+            THREE.MathUtils.lerp(POS_BRICK_CORNER.y - 0.2, 0.4, pe),
+            THREE.MathUtils.lerp(POS_BRICK_CORNER.z + 0.6, 2.2, pe)
+          );
+          cursorMesh.rotation.set(-0.25 + pe * 0.4, 0.2, -0.15);
+        }
+        cursorMesh.position.copy(curPos);
+
+        // Brick reaction: tumbles and settles with mass
+        if (p >= 0.4) {
+          const timeSinceImpact = (p - 0.4) * 2.5;
+          const spring = dampedSpring(timeSinceImpact, 10, 3.5);
+          brickGroup.position.set(
+            POS_BRICK_CORNER.x + spring * 0.45,
+            POS_BRICK_CORNER.y + Math.max(0, spring * 0.35),
+            POS_BRICK_CORNER.z
+          );
+          brickGroup.rotation.set(
+            0.4 + spring * 0.7,
+            -0.35 + spring * 0.85,
+            0.18 - spring * 0.35
+          );
+        } else {
+          brickGroup.position.copy(POS_BRICK_CORNER);
+          brickGroup.rotation.set(0.4, -0.35, 0.18);
+        }
+
+        // Smiley ring wobbles in resonance
+        if (p >= 0.45) {
+          const timeWobble = (p - 0.45) * 2.5;
+          const wSpring = dampedSpring(timeWobble, 12, 4);
+          smileyGroup.rotation.set(0.12 + wSpring * 0.28, 0.38 + wSpring * 0.32, wSpring * 0.22);
+        } else {
+          smileyGroup.rotation.set(0.12, 0.38, 0);
+        }
+        smileyGroup.position.copy(POS_SMILEY_CORNER);
+        moonMesh.position.copy(POS_MOON_CORNER);
+
+        textGroup.position.set(0, -12, 0);
+        pillButtonGroup.position.set(0, -12, 0);
+        orangeTraceLight.intensity = 0;
+        sparkMesh.visible = false;
+      }
+
+      // ----------------------------------------------------
+      // SHOT 4: Push-In on Pill Button [7.5s - 10.0s]
+      // ----------------------------------------------------
+      else if (t < 10.0) {
+        const p = (t - 7.5) / 2.5;
+        currentShotName = 'Shot 4: Push-In & Button Click';
+        const ease = easeInOutCubic(p);
+
+        // Camera pushes down close to the button
+        _camPos.set(
+          THREE.MathUtils.lerp(2.0, 0, ease),
+          THREE.MathUtils.lerp(6.2, -0.8, ease),
+          THREE.MathUtils.lerp(9.2, 5.2, ease)
+        );
+        _camLook.set(0, -2.1, 0.5);
+
+        // Pill button rises into place
+        pillButtonGroup.position.set(0, POS_PILL_BUTTON.y, POS_PILL_BUTTON.z);
+
+        // Cursor swoops down and clicks button firmly at p = 0.5 (t = 8.75s)
+        const pillMesh = pillButtonGroup.getObjectByName('pillMesh');
+        if (p < 0.5) {
+          const prep = p / 0.5;
+          const pe = easeInOutCubic(prep);
+          cursorMesh.position.set(
+            THREE.MathUtils.lerp(0, 0.35, pe),
+            THREE.MathUtils.lerp(0.4, -2.0, pe),
+            THREE.MathUtils.lerp(2.2, 1.15, pe)
+          );
+          cursorMesh.rotation.set(0.35, -0.1, 0.12);
+          if (pillMesh) pillMesh.position.z = 0;
+        } else {
+          const postp = (p - 0.5) / 0.5;
+          const clickSpring = dampedSpring(postp * 2.5, 14, 6);
+          cursorMesh.position.set(
+            0.35,
+            -2.0 + clickSpring * 0.16,
+            1.15 + clickSpring * 0.1
+          );
+          cursorMesh.rotation.set(0.35, -0.1, 0.12);
+          if (pillMesh) {
+            pillMesh.position.z = -Math.max(0, 0.12 - postp * 0.24) + clickSpring * 0.08;
+          }
+        }
+
+        // Orange rim flash on click
+        if (p >= 0.5 && p < 0.8) {
+          const flash = Math.sin((p - 0.5) / 0.3 * Math.PI);
+          orangeTraceLight.intensity = flash * 5.0;
+          orangeTraceLight.position.set(0.4, -1.9, 1.3);
+          sparkMesh.visible = true;
+          sparkMesh.position.copy(orangeTraceLight.position);
+          sparkMesh.scale.setScalar(flash * 1.5);
+        } else {
+          orangeTraceLight.intensity = 0;
+          sparkMesh.visible = false;
+        }
+
+        moonMesh.position.copy(POS_MOON_CORNER);
+        brickGroup.position.copy(POS_BRICK_CORNER);
+        brickGroup.rotation.set(0.4, -0.35, 0.18);
+        smileyGroup.position.copy(POS_SMILEY_CORNER);
+
+        // Letters remain deep under floor during shot 4
+        textGroup.position.set(0, -12, 0);
+      }
+
+      // ----------------------------------------------------
+      // SHOT 5: The Signature Shot [10.0s - 12.5s]
+      // ----------------------------------------------------
+      else if (t < 12.5) {
+        const p = (t - 10.0) / 2.5;
+        currentShotName = 'Shot 5: Signature Shot (Pull-Back & Light Trace)';
+        const ease = easeInOutCubic(p);
+
+        // Sweeping crane pull-back and rise to full heroic composition
+        _camPos.set(
+          THREE.MathUtils.lerp(0, 0, ease),
+          THREE.MathUtils.lerp(-0.8, 0.3, ease),
+          THREE.MathUtils.lerp(5.2, 13.0, ease)
+        );
+        _camLook.set(0, 0, 0);
+
+        // Heavy extruded letters "ABOUT ME" rise vertically from floor
+        const textRise = easeOutExpo(clamp(p * 1.25));
+        textGroup.position.set(
+          0,
+          THREE.MathUtils.lerp(-8.0, 0.35, textRise),
+          THREE.MathUtils.lerp(-1.0, 0, textRise)
+        );
+        textGroup.rotation.x = (1 - textRise) * 0.25;
+
+        pillButtonGroup.position.copy(POS_PILL_BUTTON);
+
+        // Cursor glides to bottom-right corner position
+        cursorMesh.position.lerpVectors(
+          new THREE.Vector3(0.35, -2.0, 1.15),
+          POS_CURSOR_CORNER,
+          ease
+        );
+        cursorMesh.rotation.set(0.15, -0.25, 0.18);
+
+        moonMesh.position.copy(POS_MOON_CORNER);
+        moonMesh.rotation.set(0.24, 0.48, -0.15);
+
+        brickGroup.position.copy(POS_BRICK_CORNER);
+        brickGroup.rotation.set(0.38, -0.42, 0.15);
+
+        smileyGroup.position.copy(POS_SMILEY_CORNER);
+        smileyGroup.rotation.set(0.12, 0.38, 0);
+
+        // Traveling Warm Orange Light sweeps across the extruded letters
+        if (p > 0.2) {
+          const traceP = (p - 0.2) / 0.8;
+          const sweepX = THREE.MathUtils.lerp(-4.2, 4.2, traceP);
+          const sweepY = 0.35 + Math.sin(traceP * Math.PI * 2) * 0.35;
+          orangeTraceLight.position.set(sweepX, sweepY, 1.2);
+          const flash = Math.sin(traceP * Math.PI);
+          orangeTraceLight.intensity = flash * 7.0;
+          sparkMesh.visible = true;
+          sparkMesh.position.copy(orangeTraceLight.position);
+          sparkMesh.scale.setScalar(0.6 + flash * 0.8);
+        } else {
+          orangeTraceLight.intensity = 0;
+          sparkMesh.visible = false;
+        }
+      }
+
+      // ----------------------------------------------------
+      // SHOT 6: Settle & Return Push-In to Macro [12.5s - 15.0s]
+      // ----------------------------------------------------
+      else {
+        const p = (t - 12.5) / 2.5;
+        currentShotName = 'Shot 6: Settle & Return Push-In';
+
+        if (p < 0.4) {
+          // Held heroic composition
+          _camPos.set(0, 0.3, 13.0);
+          _camLook.set(0, 0, 0);
+          orangeTraceLight.intensity = (1 - (p / 0.4)) * 2.0;
+          sparkMesh.visible = orangeTraceLight.intensity > 0.2;
+        } else {
+          // Smooth continuous push-in toward the top-left moon's edge
+          const returnP = (p - 0.4) / 0.6;
+          const easeReturn = easeInOutCubic(returnP);
+
+          _camPos.lerpVectors(
+            new THREE.Vector3(0, 0.3, 13.0),
+            MACRO_CAM_POS,
+            easeReturn
+          );
+          _camLook.lerpVectors(
+            new THREE.Vector3(0, 0, 0),
+            MACRO_CAM_LOOK,
+            easeReturn
+          );
+          orangeTraceLight.intensity = 0;
+          sparkMesh.visible = false;
+
+          textGroup.position.y = THREE.MathUtils.lerp(0.35, -12.0, easeReturn);
+          pillButtonGroup.position.y = THREE.MathUtils.lerp(POS_PILL_BUTTON.y, -12.0, easeReturn);
+        }
+
+        // Moon aligns seamlessly to initial Shot 1 orientation at t = 15.0s
+        const moonReturnEase = easeInOutCubic(clamp((p - 0.4) / 0.6));
+        moonMesh.position.copy(POS_MOON_CORNER);
+        moonMesh.rotation.set(
+          THREE.MathUtils.lerp(0.24, 0.2, moonReturnEase),
+          THREE.MathUtils.lerp(0.48, 0.35, moonReturnEase),
+          -0.15
+        );
+        moonMesh.scale.set(
+          THREE.MathUtils.lerp(1.0, 1.2, moonReturnEase),
+          THREE.MathUtils.lerp(1.0, 1.2, moonReturnEase),
+          THREE.MathUtils.lerp(1.0, 1.2, moonReturnEase)
+        );
+
+        brickGroup.position.copy(POS_BRICK_CORNER);
+        brickGroup.rotation.set(0.38, -0.42, 0.15);
+        smileyGroup.position.copy(POS_SMILEY_CORNER);
+        cursorMesh.position.copy(POS_CURSOR_CORNER);
+      }
+
+      camera.position.copy(_camPos);
+      camera.lookAt(_camLook);
+
+      renderer.render(scene, camera);
+
+      if (!isRenderMode) {
+        const hudShot = document.getElementById('hud-shot');
+        const hudTime = document.getElementById('hud-time');
+        if (hudShot) hudShot.textContent = currentShotName;
+        if (hudTime) hudTime.textContent = `${t.toFixed(1)}s / ${DURATION.toFixed(1)}s`;
+      }
+    };
+
+    window.__threeReady = true;
+
+    if (!isRenderMode) {
+      let startTime = performance.now();
+      function animate() {
+        requestAnimationFrame(animate);
+        const elapsed = (performance.now() - startTime) / 1000;
+        window.seek(elapsed);
+      }
+      animate();
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+    } else {
+      window.seek(0);
+    }
+  </script>
+</body>
+</html>
